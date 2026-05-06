@@ -8,8 +8,24 @@ Uso:
         pagina=1,
         quantidade=10,
         data_inicio="2024-01-01",
-        data_fim="2024-12-31"
+        data_fim="2024-12-31",
+        modalidade=6
     )
+
+Códigos de modalidade (codigoModalidadeContratacao):
+    1  = Leilão Eletrônico
+    2  = Diálogo Competitivo
+    3  = Concurso
+    4  = Concorrência Eletrônica
+    5  = Concorrência Presencial
+    6  = Pregão Eletrônico
+    7  = Pregão Presencial
+    8  = Dispensa de Licitação
+    9  = Inexigibilidade de Licitação
+    10 = Manifestação de Interesse
+    11 = Pré-qualificação
+    12 = Credenciamento
+    13 = Leilão Presencial
 """
 
 import requests
@@ -18,7 +34,6 @@ from datetime import datetime
 from typing import List, Dict, Optional
 import logging
 
-# Configurar logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -26,56 +41,44 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _formatar_data(data: str) -> str:
+    """Converte YYYY-MM-DD para YYYYMMDD exigido pela API PNCP."""
+    return data.replace('-', '')
+
+
 class PNCPClient:
     """Cliente para consumir API do Portal Nacional de Contratações Públicas"""
-    
-    # URLs base da API
-    BASE_URL = "https://pncp.gov.br/api/consulta"
-    
-    # Endpoints disponíveis
+
+    BASE_URL = "https://pncp.gov.br/api/consulta/v1"
+
     ENDPOINTS = {
-        'editais': '/compras',
+        'editais': '/contratacoes/publicacao',
         'contratos': '/contratos',
         'atas': '/atas',
-        'planos': '/planos-contratacoes-anual'
+        'planos': '/pca/atualizacao',
     }
-    
+
     def __init__(self, timeout: int = 30):
-        """
-        Inicializa o cliente PNCP
-        
-        Args:
-            timeout: Timeout para requisições em segundos
-        """
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update({
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         })
-    
+
     def _fazer_requisicao(self, endpoint: str, params: Dict) -> Optional[Dict]:
-        """
-        Faz uma requisição à API PNCP
-        
-        Args:
-            endpoint: Endpoint a chamar
-            params: Parâmetros da requisição
-            
-        Returns:
-            Resposta JSON ou None em caso de erro
-        """
         url = f"{self.BASE_URL}{endpoint}"
-        
+
         try:
             logger.info(f"Buscando: {url} com params: {params}")
             response = self.session.get(url, params=params, timeout=self.timeout)
             response.raise_for_status()
-            
+
             data = response.json()
-            logger.info(f"Status: {response.status_code} - {len(data.get('content', []))} registros retornados")
+            total = data.get('totalRegistros', len(data.get('data', [])))
+            logger.info(f"Status: {response.status_code} - {total} registros no total")
             return data
-            
+
         except requests.exceptions.Timeout:
             logger.error(f"Timeout na requisição a {url}")
             return None
@@ -83,252 +86,178 @@ class PNCPClient:
             logger.error(f"Erro de conexão com {url}")
             return None
         except requests.exceptions.HTTPError as e:
-            logger.error(f"Erro HTTP {e.response.status_code}: {e}")
+            logger.error(f"Erro HTTP {e.response.status_code}: {e.response.text}")
             return None
         except json.JSONDecodeError:
-            logger.error(f"Resposta não é JSON válido")
+            logger.error("Resposta não é JSON válido")
             return None
         except Exception as e:
             logger.error(f"Erro inesperado: {e}")
             return None
-    
+
     def buscar_editais(
         self,
         pagina: int = 1,
         quantidade: int = 10,
         data_inicio: Optional[str] = None,
         data_fim: Optional[str] = None,
-        situacao: Optional[str] = None,
-        orgao: Optional[str] = None,
+        modalidade: Optional[int] = None,
+        uf: Optional[str] = None,
+        cnpj: Optional[str] = None,
         **kwargs
-    ) -> List[Dict]:
+    ) -> Dict:
         """
-        Busca editais no PNCP
-        
+        Busca contratações (editais) no PNCP.
+
         Args:
             pagina: Número da página (padrão: 1)
-            quantidade: Quantidade de registros por página (padrão: 10, máx: 100)
-            data_inicio: Data inicial (formato: YYYY-MM-DD)
-            data_fim: Data final (formato: YYYY-MM-DD)
-            situacao: Situação do edital (ex: "DIVULGADA", "EM_ANDAMENTO")
-            orgao: CNPJ ou nome do órgão
-            **kwargs: Parâmetros adicionais
-            
+            quantidade: Registros por página (padrão: 10, máx: 50)
+            data_inicio: Data inicial publicação (YYYY-MM-DD)
+            data_fim: Data final publicação (YYYY-MM-DD)
+            modalidade: Código da modalidade de contratação (obrigatório na API PNCP)
+            uf: Sigla do estado (ex: SP, RJ)
+            cnpj: CNPJ do órgão
+
         Returns:
-            Lista de editais encontrados
+            Dict com 'data' (lista), 'totalRegistros', 'totalPaginas', 'numeroPagina'
         """
-        
-        # Validar e limitar quantidade
-        quantidade = min(max(quantidade, 1), 100)
-        
+        quantidade = min(max(quantidade, 10), 50)
+
         params = {
-            'page': pagina - 1,  # API usa page zero-indexed
-            'size': quantidade,
+            'pagina': pagina,
+            'tamanhoPagina': quantidade,
         }
-        
-        # Adicionar filtros opcionais
+
         if data_inicio:
-            params['dataInicio'] = data_inicio
+            params['dataInicial'] = _formatar_data(data_inicio)
         if data_fim:
-            params['dataFim'] = data_fim
-        if situacao:
-            params['situacao'] = situacao
-        if orgao:
-            params['orgao'] = orgao
-        
-        # Adicionar kwargs
+            params['dataFinal'] = _formatar_data(data_fim)
+        if modalidade is not None:
+            params['codigoModalidadeContratacao'] = modalidade
+        if uf:
+            params['uf'] = uf.upper()
+        if cnpj:
+            params['cnpj'] = cnpj
+
         params.update(kwargs)
-        
+
         resultado = self._fazer_requisicao(self.ENDPOINTS['editais'], params)
-        
-        if resultado is None:
-            return []
-        
-        return resultado.get('content', [])
-    
+        return resultado if resultado is not None else {'data': [], 'totalRegistros': 0}
+
     def buscar_contratos(
         self,
         pagina: int = 1,
         quantidade: int = 10,
         data_inicio: Optional[str] = None,
         data_fim: Optional[str] = None,
-        orgao: Optional[str] = None,
+        cnpj_orgao: Optional[str] = None,
         **kwargs
-    ) -> List[Dict]:
+    ) -> Dict:
         """
-        Busca contratos no PNCP
-        
+        Busca contratos no PNCP.
+
         Args:
-            pagina: Número da página
-            quantidade: Quantidade de registros por página
-            data_inicio: Data inicial (formato: YYYY-MM-DD)
-            data_fim: Data final (formato: YYYY-MM-DD)
-            orgao: CNPJ ou nome do órgão
-            **kwargs: Parâmetros adicionais
-            
-        Returns:
-            Lista de contratos encontrados
+            pagina: Número da página (padrão: 1)
+            quantidade: Registros por página (padrão: 10, máx: 500)
+            data_inicio: Data inicial publicação (YYYY-MM-DD)
+            data_fim: Data final publicação (YYYY-MM-DD)
+            cnpj_orgao: CNPJ do órgão contratante
         """
-        
-        quantidade = min(max(quantidade, 1), 100)
-        
+        quantidade = min(max(quantidade, 10), 500)
+
         params = {
-            'page': pagina - 1,
-            'size': quantidade,
+            'pagina': pagina,
+            'tamanhoPagina': quantidade,
         }
-        
+
         if data_inicio:
-            params['dataInicio'] = data_inicio
+            params['dataInicial'] = _formatar_data(data_inicio)
         if data_fim:
-            params['dataFim'] = data_fim
-        if orgao:
-            params['orgao'] = orgao
-        
+            params['dataFinal'] = _formatar_data(data_fim)
+        if cnpj_orgao:
+            params['cnpjOrgao'] = cnpj_orgao
+
         params.update(kwargs)
-        
+
         resultado = self._fazer_requisicao(self.ENDPOINTS['contratos'], params)
-        return resultado.get('content', []) if resultado else []
-    
+        return resultado if resultado is not None else {'data': [], 'totalRegistros': 0}
+
     def buscar_atas(
         self,
         pagina: int = 1,
         quantidade: int = 10,
         data_inicio: Optional[str] = None,
         data_fim: Optional[str] = None,
+        cnpj: Optional[str] = None,
         **kwargs
-    ) -> List[Dict]:
+    ) -> Dict:
         """
-        Busca Atas de Registro de Preço
-        
+        Busca Atas de Registro de Preço no PNCP.
+
         Args:
-            pagina: Número da página
-            quantidade: Quantidade de registros por página
-            data_inicio: Data inicial (formato: YYYY-MM-DD)
-            data_fim: Data final (formato: YYYY-MM-DD)
-            **kwargs: Parâmetros adicionais
-            
-        Returns:
-            Lista de atas encontradas
+            pagina: Número da página (padrão: 1)
+            quantidade: Registros por página (padrão: 10, máx: 500)
+            data_inicio: Data inicial vigência (YYYY-MM-DD)
+            data_fim: Data final vigência (YYYY-MM-DD)
+            cnpj: CNPJ do órgão
         """
-        
-        quantidade = min(max(quantidade, 1), 100)
-        
+        quantidade = min(max(quantidade, 10), 500)
+
         params = {
-            'page': pagina - 1,
-            'size': quantidade,
+            'pagina': pagina,
+            'tamanhoPagina': quantidade,
         }
-        
+
         if data_inicio:
-            params['dataInicio'] = data_inicio
+            params['dataInicial'] = _formatar_data(data_inicio)
         if data_fim:
-            params['dataFim'] = data_fim
-        
+            params['dataFinal'] = _formatar_data(data_fim)
+        if cnpj:
+            params['cnpj'] = cnpj
+
         params.update(kwargs)
-        
+
         resultado = self._fazer_requisicao(self.ENDPOINTS['atas'], params)
-        return resultado.get('content', []) if resultado else []
-    
+        return resultado if resultado is not None else {'data': [], 'totalRegistros': 0}
+
     def buscar_planos_contratacao(
         self,
         pagina: int = 1,
         quantidade: int = 10,
-        ano: Optional[int] = None,
-        orgao: Optional[str] = None,
+        data_inicio: Optional[str] = None,
+        data_fim: Optional[str] = None,
+        cnpj: Optional[str] = None,
         **kwargs
-    ) -> List[Dict]:
+    ) -> Dict:
         """
-        Busca Planos de Contratação Anual
-        
+        Busca Planos de Contratação Anual (PCA) por data de atualização.
+
         Args:
-            pagina: Número da página
-            quantidade: Quantidade de registros por página
-            ano: Ano do plano
-            orgao: CNPJ ou nome do órgão
-            **kwargs: Parâmetros adicionais
-            
-        Returns:
-            Lista de planos encontrados
+            pagina: Número da página (padrão: 1)
+            quantidade: Registros por página (padrão: 10, máx: 500)
+            data_inicio: Data início atualização (YYYY-MM-DD)
+            data_fim: Data fim atualização (YYYY-MM-DD)
+            cnpj: CNPJ do órgão
         """
-        
-        quantidade = min(max(quantidade, 1), 100)
-        
+        quantidade = min(max(quantidade, 10), 500)
+
         params = {
-            'page': pagina - 1,
-            'size': quantidade,
+            'pagina': pagina,
+            'tamanhoPagina': quantidade,
         }
-        
-        if ano:
-            params['ano'] = ano
-        if orgao:
-            params['orgao'] = orgao
-        
+
+        if data_inicio:
+            params['dataInicio'] = _formatar_data(data_inicio)
+        if data_fim:
+            params['dataFim'] = _formatar_data(data_fim)
+        if cnpj:
+            params['cnpj'] = cnpj
+
         params.update(kwargs)
-        
+
         resultado = self._fazer_requisicao(self.ENDPOINTS['planos'], params)
-        return resultado.get('content', []) if resultado else []
-    
+        return resultado if resultado is not None else {'data': [], 'totalRegistros': 0}
+
     def fechar(self):
         """Fecha a sessão HTTP"""
         self.session.close()
-
-
-def exemplo_uso():
-    """Exemplos de uso do cliente PNCP"""
-    
-    client = PNCPClient()
-    
-    print("=" * 80)
-    print("EXEMPLO 1: Buscar editais dos últimos 30 dias")
-    print("=" * 80)
-    
-    data_fim = datetime.now().strftime("%Y-%m-%d")
-    data_inicio = datetime.now().strftime("%Y-%m-01")  # Início do mês
-    
-    editais = client.buscar_editais(
-        quantidade=5,
-        data_inicio=data_inicio,
-        data_fim=data_fim
-    )
-    
-    if editais:
-        for i, edital in enumerate(editais, 1):
-            print(f"\n{i}. {edital.get('numero', 'N/A')}")
-            print(f"   Órgão: {edital.get('orgao', {}).get('nome', 'N/A')}")
-            print(f"   Objeto: {edital.get('objeto', 'N/A')[:100]}...")
-            print(f"   Data Publicação: {edital.get('dataPublicacao', 'N/A')}")
-            print(f"   ID PNCP: {edital.get('id', 'N/A')}")
-    else:
-        print("Nenhum edital encontrado")
-    
-    print("\n" + "=" * 80)
-    print("EXEMPLO 2: Buscar contratos")
-    print("=" * 80)
-    
-    contratos = client.buscar_contratos(quantidade=3)
-    
-    if contratos:
-        for i, contrato in enumerate(contratos, 1):
-            print(f"\n{i}. {contrato.get('numero', 'N/A')}")
-            print(f"   Valor: R$ {contrato.get('valor', 0):,.2f}")
-            print(f"   Data: {contrato.get('dataPublicacao', 'N/A')}")
-    else:
-        print("Nenhum contrato encontrado")
-    
-    print("\n" + "=" * 80)
-    print("EXEMPLO 3: Buscar atas de registro de preço")
-    print("=" * 80)
-    
-    atas = client.buscar_atas(quantidade=3)
-    
-    if atas:
-        for i, ata in enumerate(atas, 1):
-            print(f"\n{i}. {ata.get('numero', 'N/A')}")
-            print(f"   Vigência: {ata.get('dataInicio', 'N/A')} a {ata.get('dataFim', 'N/A')}")
-    else:
-        print("Nenhuma ata encontrada")
-    
-    client.fechar()
-
-
-if __name__ == "__main__":
-    exemplo_uso()
