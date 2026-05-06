@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM Editais - PNCP</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <style>
+    body { background: #f0f2f5; }
+    .navbar { background: #1a3a5c !important; }
+    .card { border: none; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .card-header { border-radius: 10px 10px 0 0 !important; font-weight: 600; }
+    .table-wrapper { overflow-x: auto; max-height: 520px; overflow-y: auto; }
+    .table thead th {
+      position: sticky; top: 0; z-index: 2;
+      background: #1a3a5c; color: #fff; font-size: .8rem;
+      white-space: nowrap; padding: 10px 14px;
+    }
+    .table tbody td { font-size: .82rem; vertical-align: middle; }
+    .table tbody tr:hover { background: #eef4fb; }
+    .badge-modalidade { font-size: .72rem; }
+    #status-bar { font-size: .82rem; }
+    .spinner-border { width: 1.4rem; height: 1.4rem; }
+    .tab-pane .form-label { font-size: .85rem; font-weight: 500; }
+    .result-empty { padding: 3rem; text-align: center; color: #6c757d; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark mb-4">
+  <div class="container-fluid px-4">
+    <span class="navbar-brand mb-0 h1">
+      <i class="bi bi-file-earmark-text me-2"></i>CRM Editais — PNCP
+    </span>
+  </div>
+</nav>
+
+<div class="container-fluid px-4">
+
+  <!-- Formulário de busca -->
+  <div class="card mb-4">
+    <div class="card-header bg-white py-3">
+      <i class="bi bi-search me-2 text-primary"></i>Consultar dados
+    </div>
+    <div class="card-body">
+
+      <!-- Abas de endpoint -->
+      <ul class="nav nav-tabs mb-3" id="endpointTabs">
+        <li class="nav-item">
+          <a class="nav-link active" data-bs-toggle="tab" href="#tab-editais" data-endpoint="editais">
+            <i class="bi bi-file-earmark-text me-1"></i>Editais
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="tab" href="#tab-contratos" data-endpoint="contratos">
+            <i class="bi bi-file-earmark-check me-1"></i>Contratos
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="tab" href="#tab-atas" data-endpoint="atas">
+            <i class="bi bi-journal-bookmark me-1"></i>Atas
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="tab" href="#tab-planos" data-endpoint="planos">
+            <i class="bi bi-calendar3 me-1"></i>Planos (PCA)
+          </a>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+
+        <!-- EDITAIS -->
+        <div class="tab-pane fade show active" id="tab-editais">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Modalidade <span class="text-danger">*</span></label>
+              <select class="form-select form-select-sm" id="e-modalidade">
+                <option value="">Selecione...</option>
+                <option value="6">6 – Pregão Eletrônico</option>
+                <option value="8">8 – Dispensa de Licitação</option>
+                <option value="9">9 – Inexigibilidade</option>
+                <option value="4">4 – Concorrência Eletrônica</option>
+                <option value="5">5 – Concorrência Presencial</option>
+                <option value="7">7 – Pregão Presencial</option>
+                <option value="1">1 – Leilão Eletrônico</option>
+                <option value="2">2 – Diálogo Competitivo</option>
+                <option value="3">3 – Concurso</option>
+                <option value="10">10 – Manifestação de Interesse</option>
+                <option value="11">11 – Pré-qualificação</option>
+                <option value="12">12 – Credenciamento</option>
+                <option value="13">13 – Leilão Presencial</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Período</label>
+              <select class="form-select form-select-sm" id="e-dias">
+                <option value="7">Últimos 7 dias</option>
+                <option value="15">Últimos 15 dias</option>
+                <option value="30" selected>Últimos 30 dias</option>
+                <option value="60">Últimos 60 dias</option>
+                <option value="">Personalizado</option>
+              </select>
+            </div>
+            <div class="col-md-2" id="e-custom-dates" style="display:none">
+              <label class="form-label">Data início</label>
+              <input type="date" class="form-control form-control-sm" id="e-data-inicio" />
+            </div>
+            <div class="col-md-2" id="e-custom-dates2" style="display:none">
+              <label class="form-label">Data fim</label>
+              <input type="date" class="form-control form-control-sm" id="e-data-fim" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">UF</label>
+              <select class="form-select form-select-sm" id="e-uf">
+                <option value="">Todos os estados</option>
+                <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+                <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+                <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+                <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+                <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+                <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+                <option>SP</option><option>SE</option><option>TO</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Qtd. por página</label>
+              <select class="form-select form-select-sm" id="e-quantidade">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTRATOS -->
+        <div class="tab-pane fade" id="tab-contratos">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label class="form-label">Período</label>
+              <select class="form-select form-select-sm" id="c-dias">
+                <option value="7">Últimos 7 dias</option>
+                <option value="15">Últimos 15 dias</option>
+                <option value="30" selected>Últimos 30 dias</option>
+                <option value="60">Últimos 60 dias</option>
+                <option value="">Personalizado</option>
+              </select>
+            </div>
+            <div class="col-md-2" id="c-custom-dates" style="display:none">
+              <label class="form-label">Data início</label>
+              <input type="date" class="form-control form-control-sm" id="c-data-inicio" />
+            </div>
+            <div class="col-md-2" id="c-custom-dates2" style="display:none">
+              <label class="form-label">Data fim</label>
+              <input type="date" class="form-control form-control-sm" id="c-data-fim" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">CNPJ do órgão</label>
+              <input type="text" class="form-control form-control-sm" id="c-cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Qtd. por página</label>
+              <select class="form-select form-select-sm" id="c-quantidade">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- ATAS -->
+        <div class="tab-pane fade" id="tab-atas">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label class="form-label">Período de vigência</label>
+              <select class="form-select form-select-sm" id="a-dias">
+                <option value="7">Últimos 7 dias</option>
+                <option value="15">Últimos 15 dias</option>
+                <option value="30" selected>Últimos 30 dias</option>
+                <option value="60">Últimos 60 dias</option>
+                <option value="">Personalizado</option>
+              </select>
+            </div>
+            <div class="col-md-2" id="a-custom-dates" style="display:none">
+              <label class="form-label">Data início</label>
+              <input type="date" class="form-control form-control-sm" id="a-data-inicio" />
+            </div>
+            <div class="col-md-2" id="a-custom-dates2" style="display:none">
+              <label class="form-label">Data fim</label>
+              <input type="date" class="form-control form-control-sm" id="a-data-fim" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">CNPJ do órgão</label>
+              <input type="text" class="form-control form-control-sm" id="a-cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Qtd. por página</label>
+              <select class="form-select form-select-sm" id="a-quantidade">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLANOS -->
+        <div class="tab-pane fade" id="tab-planos">
+          <div class="row g-3">
+            <div class="col-md-2">
+              <label class="form-label">Período de atualização</label>
+              <select class="form-select form-select-sm" id="p-dias">
+                <option value="7">Últimos 7 dias</option>
+                <option value="15">Últimos 15 dias</option>
+                <option value="30" selected>Últimos 30 dias</option>
+                <option value="60">Últimos 60 dias</option>
+                <option value="">Personalizado</option>
+              </select>
+            </div>
+            <div class="col-md-2" id="p-custom-dates" style="display:none">
+              <label class="form-label">Data início</label>
+              <input type="date" class="form-control form-control-sm" id="p-data-inicio" />
+            </div>
+            <div class="col-md-2" id="p-custom-dates2" style="display:none">
+              <label class="form-label">Data fim</label>
+              <input type="date" class="form-control form-control-sm" id="p-data-fim" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">CNPJ do órgão</label>
+              <input type="text" class="form-control form-control-sm" id="p-cnpj" placeholder="00.000.000/0000-00" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Qtd. por página</label>
+              <select class="form-select form-select-sm" id="p-quantidade">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- tab-content -->
+
+      <div class="mt-3 d-flex align-items-center gap-2">
+        <button class="btn btn-primary btn-sm px-4" id="btn-buscar" onclick="buscar(1)">
+          <i class="bi bi-search me-1"></i>Buscar
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" onclick="limpar()">
+          <i class="bi bi-x-circle me-1"></i>Limpar
+        </button>
+        <div id="spinner" class="spinner-border text-primary ms-2" role="status" style="display:none!important">
+          <span class="visually-hidden">Carregando...</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <div class="card" id="resultado-card" style="display:none">
+    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+      <span id="resultado-titulo"><i class="bi bi-table me-2 text-primary"></i>Resultados</span>
+      <div id="status-bar" class="text-muted"></div>
+    </div>
+    <div class="card-body p-0">
+      <div id="alert-box"></div>
+      <div class="table-wrapper">
+        <table class="table table-bordered table-hover mb-0" id="grid">
+          <thead id="grid-head"></thead>
+          <tbody id="grid-body"></tbody>
+        </table>
+        <div id="empty-msg" class="result-empty" style="display:none">
+          <i class="bi bi-inbox display-5 d-block mb-2"></i>Nenhum registro encontrado para os filtros selecionados.
+        </div>
+      </div>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+      <span id="pag-info" class="text-muted" style="font-size:.82rem"></span>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary btn-sm" id="btn-prev" onclick="buscar(paginaAtual-1)" disabled>
+          <i class="bi bi-chevron-left"></i> Anterior
+        </button>
+        <button class="btn btn-outline-primary btn-sm" id="btn-next" onclick="buscar(paginaAtual+1)" disabled>
+          Próxima <i class="bi bi-chevron-right"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- container -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+let endpointAtual = 'editais';
+let paginaAtual = 1;
+let totalPaginas = 1;
+
+// Muda endpoint ativo ao trocar de aba
+document.querySelectorAll('#endpointTabs .nav-link').forEach(tab => {
+  tab.addEventListener('shown.bs.tab', e => {
+    endpointAtual = e.target.dataset.endpoint;
+    document.getElementById('resultado-card').style.display = 'none';
+  });
+});
+
+// Mostrar/ocultar datas customizadas
+['e','c','a','p'].forEach(p => {
+  const sel = document.getElementById(`${p}-dias`);
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    const show = sel.value === '';
+    document.getElementById(`${p}-custom-dates`).style.display = show ? '' : 'none';
+    document.getElementById(`${p}-custom-dates2`).style.display = show ? '' : 'none';
+  });
+});
+
+function getParams() {
+  const p = endpointAtual[0]; // prefix: e, c, a, p
+  const dias = document.getElementById(`${p}-dias`)?.value;
+  const quantidade = document.getElementById(`${p}-quantidade`)?.value || 20;
+  const params = new URLSearchParams({ quantidade });
+
+  if (dias) {
+    params.set('dias', dias);
+  } else {
+    const di = document.getElementById(`${p}-data-inicio`)?.value;
+    const df = document.getElementById(`${p}-data-fim`)?.value;
+    if (di) params.set('data_inicio', di);
+    if (df) params.set('data_fim', df);
+  }
+
+  if (endpointAtual === 'editais') {
+    const mod = document.getElementById('e-modalidade').value;
+    if (!mod) { alert('Selecione uma modalidade para buscar editais.'); return null; }
+    params.set('modalidade', mod);
+    const uf = document.getElementById('e-uf').value;
+    if (uf) params.set('uf', uf);
+  } else if (endpointAtual === 'contratos') {
+    const cnpj = document.getElementById('c-cnpj').value.replace(/\D/g,'');
+    if (cnpj) params.set('cnpj_orgao', cnpj);
+  } else if (endpointAtual === 'atas') {
+    const cnpj = document.getElementById('a-cnpj').value.replace(/\D/g,'');
+    if (cnpj) params.set('cnpj', cnpj);
+  } else if (endpointAtual === 'planos') {
+    const cnpj = document.getElementById('p-cnpj').value.replace(/\D/g,'');
+    if (cnpj) params.set('cnpj', cnpj);
+  }
+
+  return params;
+}
+
+async function buscar(pagina) {
+  const params = getParams();
+  if (!params) return;
+
+  params.set('pagina', pagina);
+  paginaAtual = pagina;
+
+  setLoading(true);
+  document.getElementById('alert-box').innerHTML = '';
+
+  try {
+    const res = await fetch(`/api/pncp/${endpointAtual}?${params}`);
+    const json = await res.json();
+
+    if (!json.sucesso) {
+      showAlert('danger', json.erro || 'Erro desconhecido ao buscar dados.');
+      document.getElementById('resultado-card').style.display = 'block';
+      document.getElementById('grid-body').innerHTML = '';
+      document.getElementById('grid-head').innerHTML = '';
+      document.getElementById('empty-msg').style.display = 'block';
+      return;
+    }
+
+    totalPaginas = json.total_paginas || 1;
+    renderGrid(json);
+  } catch (err) {
+    showAlert('danger', 'Falha na comunicação com a API: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function renderGrid(json) {
+  const dados = json.dados || [];
+  const card = document.getElementById('resultado-card');
+  const emptyMsg = document.getElementById('empty-msg');
+  const grid = document.getElementById('grid');
+
+  card.style.display = 'block';
+
+  // Status bar
+  document.getElementById('status-bar').textContent =
+    `${json.total_registros?.toLocaleString('pt-BR') || 0} registros encontrados`;
+
+  document.getElementById('resultado-titulo').innerHTML =
+    `<i class="bi bi-table me-2 text-primary"></i>Resultados — ${labelEndpoint()}`;
+
+  if (dados.length === 0) {
+    emptyMsg.style.display = 'block';
+    grid.style.display = 'none';
+    document.getElementById('pag-info').textContent = '';
+    document.getElementById('btn-prev').disabled = true;
+    document.getElementById('btn-next').disabled = true;
+    return;
+  }
+
+  emptyMsg.style.display = 'none';
+  grid.style.display = '';
+
+  // Colunas por endpoint
+  const cols = getColunas();
+  const thead = document.getElementById('grid-head');
+  thead.innerHTML = '<tr>' + cols.map(c => `<th>${c.label}</th>`).join('') + '</tr>';
+
+  const tbody = document.getElementById('grid-body');
+  tbody.innerHTML = dados.map(row => {
+    return '<tr>' + cols.map(c => {
+      const val = getVal(row, c.key);
+      return `<td title="${escHtml(String(val))}">${escHtml(truncate(String(val), 80))}</td>`;
+    }).join('') + '</tr>';
+  }).join('');
+
+  // Paginação
+  document.getElementById('pag-info').textContent =
+    `Página ${paginaAtual} de ${totalPaginas}`;
+  document.getElementById('btn-prev').disabled = paginaAtual <= 1;
+  document.getElementById('btn-next').disabled = paginaAtual >= totalPaginas;
+}
+
+function getColunas() {
+  switch (endpointAtual) {
+    case 'editais': return [
+      { label: 'Nº Compra PNCP',    key: 'numeroCompra' },
+      { label: 'Ano',               key: 'anoCompra' },
+      { label: 'Modalidade',        key: 'modalidadeNome' },
+      { label: 'Situação',          key: 'situacaoCompraNome' },
+      { label: 'Objeto',            key: 'objetoCompra' },
+      { label: 'Valor Estimado',    key: 'valorTotalEstimado', fmt: 'currency' },
+      { label: 'Publicação',        key: 'dataPublicacaoPncp', fmt: 'date' },
+      { label: 'Órgão',             key: 'orgaoEntidade.razaoSocial' },
+      { label: 'UF',                key: 'unidadeOrgao.ufSigla' },
+      { label: 'Município',         key: 'unidadeOrgao.municipioNome' },
+    ];
+    case 'contratos': return [
+      { label: 'Nº Contrato',       key: 'numeroContratoEmpenho' },
+      { label: 'Ano',               key: 'anoContrato' },
+      { label: 'Tipo',              key: 'tipoContrato.nome' },
+      { label: 'Categoria',         key: 'categoriaProcesso.nome' },
+      { label: 'Fornecedor',        key: 'nomeRazaoSocialFornecedor' },
+      { label: 'Valor Global',      key: 'valorGlobal', fmt: 'currency' },
+      { label: 'Assinatura',        key: 'dataAssinatura', fmt: 'date' },
+      { label: 'Vigência Início',   key: 'dataVigenciaInicio', fmt: 'date' },
+      { label: 'Vigência Fim',      key: 'dataVigenciaFim', fmt: 'date' },
+      { label: 'Órgão',             key: 'orgaoEntidade.razaoSocial' },
+      { label: 'UF',                key: 'unidadeOrgao.ufSigla' },
+    ];
+    case 'atas': return [
+      { label: 'Nº Ata',            key: 'numeroAtaRegistroPreco' },
+      { label: 'Ano',               key: 'anoAta' },
+      { label: 'Objeto',            key: 'objetoContratacao' },
+      { label: 'Órgão',             key: 'nomeOrgao' },
+      { label: 'CNPJ Órgão',        key: 'cnpjOrgao' },
+      { label: 'Vigência Início',   key: 'vigenciaInicio', fmt: 'date' },
+      { label: 'Vigência Fim',      key: 'vigenciaFim', fmt: 'date' },
+      { label: 'Publicação PNCP',   key: 'dataPublicacaoPncp', fmt: 'date' },
+      { label: 'Cancelado',         key: 'cancelado' },
+    ];
+    case 'planos': return [
+      { label: 'Ano PCA',           key: 'anoPca' },
+      { label: 'Seq. PCA',          key: 'sequencialPca' },
+      { label: 'Descrição',         key: 'descricaoItem' },
+      { label: 'Unidade',           key: 'unidadeMedida' },
+      { label: 'Qtd. Estimada',     key: 'quantidadeEstimada' },
+      { label: 'Valor Estimado',    key: 'valorUnitarioEstimado', fmt: 'currency' },
+      { label: 'Órgão',             key: 'nomeOrgao' },
+      { label: 'Atualização',       key: 'dataAtualizacaoGlobal', fmt: 'date' },
+    ];
+    default: return [];
+  }
+}
+
+function getVal(obj, key) {
+  const parts = key.split('.');
+  let v = obj;
+  for (const p of parts) {
+    if (v == null) return '—';
+    v = v[p];
+  }
+  if (v == null || v === '') return '—';
+  return v;
+}
+
+function truncate(str, max) {
+  return str.length > max ? str.slice(0, max) + '…' : str;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function labelEndpoint() {
+  return { editais: 'Editais', contratos: 'Contratos', atas: 'Atas', planos: 'Planos (PCA)' }[endpointAtual];
+}
+
+function showAlert(type, msg) {
+  document.getElementById('alert-box').innerHTML =
+    `<div class="alert alert-${type} m-3 py-2 mb-0">${escHtml(msg)}</div>`;
+}
+
+function setLoading(on) {
+  const spinner = document.getElementById('spinner');
+  const btn = document.getElementById('btn-buscar');
+  spinner.style.setProperty('display', on ? 'inline-block' : 'none', 'important');
+  btn.disabled = on;
+}
+
+function limpar() {
+  document.getElementById('resultado-card').style.display = 'none';
+  document.getElementById('alert-box').innerHTML = '';
+}
+</script>
+</body>
+</html>
