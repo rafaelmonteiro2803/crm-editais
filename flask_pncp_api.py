@@ -14,7 +14,7 @@ Endpoints:
     GET /api/pncp/status    - Status da API
 """
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from datetime import datetime, timedelta
 import logging
 from pncp_api_client import PNCPClient
@@ -46,20 +46,8 @@ MODALIDADES = {
 
 @app.route('/', methods=['GET'])
 def index():
-    """GET / - Informações da API"""
-    return jsonify({
-        'nome': 'CRM Editais - API PNCP',
-        'versao': '1.0.0',
-        'descricao': 'API para consulta de dados do Portal Nacional de Contratações Públicas',
-        'data_consulta': datetime.now().isoformat(),
-        'endpoints': {
-            'editais': '/api/pncp/editais',
-            'contratos': '/api/pncp/contratos',
-            'atas': '/api/pncp/atas',
-            'planos': '/api/pncp/planos',
-            'status': '/api/pncp/status',
-        }
-    }), 200
+    """GET / - Interface web"""
+    return render_template('index.html')
 
 
 @app.route('/api/pncp/editais', methods=['GET'])
