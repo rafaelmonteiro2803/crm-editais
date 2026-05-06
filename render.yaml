@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: crm-editais
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn flask_pncp_api:app
