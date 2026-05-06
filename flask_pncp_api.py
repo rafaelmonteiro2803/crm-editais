@@ -4,11 +4,14 @@ Endpoints HTTP para buscar editais, contratos e atas
 
 Uso:
     flask run
-    
+
 Endpoints:
-    GET /api/pncp/editais - Buscar editais
+    GET /                  - Informações e lista de endpoints da API
+    GET /api/pncp/editais  - Buscar editais
     GET /api/pncp/contratos - Buscar contratos
-    GET /api/pncp/atas - Buscar atas
+    GET /api/pncp/atas     - Buscar atas
+    GET /api/pncp/planos   - Buscar planos de contratação anual
+    GET /api/pncp/status   - Status da API
 """
 
 from flask import Flask, request, jsonify
@@ -24,6 +27,24 @@ logger = logging.getLogger(__name__)
 
 # Instância global do cliente PNCP
 pncp_client = PNCPClient()
+
+
+@app.route('/', methods=['GET'])
+def index():
+    """GET / - Informações da API"""
+    return jsonify({
+        'nome': 'CRM Editais - API PNCP',
+        'versao': '1.0.0',
+        'descricao': 'API para consulta de dados do Portal Nacional de Contratações Públicas',
+        'data_consulta': datetime.now().isoformat(),
+        'endpoints': {
+            'editais': '/api/pncp/editais',
+            'contratos': '/api/pncp/contratos',
+            'atas': '/api/pncp/atas',
+            'planos': '/api/pncp/planos',
+            'status': '/api/pncp/status'
+        }
+    }), 200
 
 
 @app.route('/api/pncp/editais', methods=['GET'])
