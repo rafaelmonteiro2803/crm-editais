@@ -20,6 +20,7 @@ import logging
 from pncp_api_client import PNCPClient
 
 app = Flask(__name__)
+app.json.ensure_ascii = False
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
